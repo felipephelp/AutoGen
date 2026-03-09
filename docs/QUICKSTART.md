@@ -22,6 +22,11 @@ $env:PYTHONPATH = (Resolve-Path .\src)
 .\scripts\run_all_examples.ps1
 ```
 
+Notes:
+
+- `run_all_examples.ps1` suppresses noisy replay warnings and prints only the useful content.
+- Individual scripts still print their own summary by default.
+
 4. Inspect generated outputs:
 
 ```text

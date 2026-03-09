@@ -3,6 +3,7 @@ $ErrorActionPreference = "Stop"
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $root
 $env:PYTHONPATH = (Join-Path $root "src")
+$env:AUTOGEN_EXAMPLE_CONSOLE = "0"
 
 $examples = @(
   "01_basic_agent_chat.py",
@@ -18,9 +19,44 @@ $examples = @(
 
 foreach ($example in $examples) {
   Write-Host "Running $example"
-  & ".\.venv\Scripts\python.exe" (Join-Path "examples" $example)
-  if ($LASTEXITCODE -ne 0) {
+  $previousPreference = $ErrorActionPreference
+  $ErrorActionPreference = "Continue"
+  $rawLogs = & ".\.venv\Scripts\python.exe" (Join-Path "examples" $example) 2>&1
+  $exitCode = $LASTEXITCODE
+  $ErrorActionPreference = $previousPreference
+
+  $noisePatterns = @(
+    "tool_choice parameter specified but is ignored in replay mode",
+    "Token count has been done only on string content"
+  )
+  $cleanLogs = @()
+  foreach ($lineObj in $rawLogs) {
+    $line = [string]$lineObj
+    $isNoise = $false
+    foreach ($pattern in $noisePatterns) {
+      if ($line -like "*$pattern*") {
+        $isNoise = $true
+        break
+      }
+    }
+    if (-not $isNoise -and -not [string]::IsNullOrWhiteSpace($line)) {
+      $cleanLogs += $line
+    }
+  }
+
+  if ($exitCode -ne 0) {
+    Write-Host "[$example] Execution failed. Raw logs:"
+    foreach ($lineObj in $rawLogs) {
+      Write-Host ([string]$lineObj)
+    }
     throw "Example failed: $example"
+  }
+
+  if ($cleanLogs.Count -gt 0) {
+    Write-Host "[$example] Additional logs:"
+    foreach ($line in $cleanLogs) {
+      Write-Host $line
+    }
   }
 
   $exampleId = [System.IO.Path]::GetFileNameWithoutExtension($example)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from typing import Any
 
@@ -29,14 +30,21 @@ async def run_agent_example(
         },
     )
 
-    # Console summary to make individual execution self-explanatory.
-    final_content: Any = ""
-    if result.messages:
-        final_content = getattr(result.messages[-1], "content", "")
-    if not isinstance(final_content, str):
-        final_content = json.dumps(final_content, ensure_ascii=False, indent=2)
+    # Console summary for individual runs (can be disabled by AUTOGEN_EXAMPLE_CONSOLE=0).
+    show_console = os.getenv("AUTOGEN_EXAMPLE_CONSOLE", "1").strip().lower() not in {
+        "0",
+        "false",
+        "no",
+        "off",
+    }
+    if show_console:
+        final_content: Any = ""
+        if result.messages:
+            final_content = getattr(result.messages[-1], "content", "")
+        if not isinstance(final_content, str):
+            final_content = json.dumps(final_content, ensure_ascii=False, indent=2)
 
-    print(f"[{example_id}] INPUT: {task}")
-    print(f"[{example_id}] OUTPUT: {final_content}")
-    print(f"[{example_id}] OUTPUT_DIR: {package['output_dir']}")
+        print(f"[{example_id}] INPUT: {task}")
+        print(f"[{example_id}] OUTPUT: {final_content}")
+        print(f"[{example_id}] OUTPUT_DIR: {package['output_dir']}")
     return result, package
